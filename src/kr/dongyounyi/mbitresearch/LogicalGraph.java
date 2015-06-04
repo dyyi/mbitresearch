@@ -69,11 +69,21 @@ public class LogicalGraph {
 		for (String pinName : verilog.getOutputPinList()) {
 			outputPinHash.put(pinName, new Pin(pinName));
 		}
-		for (String wireName : verilog.getWireList()) {
-			wireHash.put(wireName, new Net(wireName));
-		}
 		pinHash.putAll(inputPinHash);
 		pinHash.putAll(outputPinHash);
+		for (String wireName : verilog.getWireList()) {
+			Net net = new Net(wireName);
+			wireHash.put(wireName, net);
+			if (pinHash.containsKey(wireName)) {
+				if (net.getConnectionHash().containsKey(this.top) == false) {
+					LinkedList<Pin> pinList = new LinkedList<Pin>();
+					pinList.add(pinHash.get(wireName));
+					net.getConnectionHash().put(this.top, pinList);
+				} else {
+					net.getConnectionHash().get(this.top).add(pinHash.get(wireName));
+				}
+			}
+		}
 					
 		Iterator<String> assignIt = verilog.getAssignHash().keySet().iterator();
 		while (assignIt.hasNext()) {
@@ -181,7 +191,7 @@ public class LogicalGraph {
 							}
 						}
 						if (!inputCheck) { continue; }
-						lgcFF.addDescendentCount(calculateFFDelta_recur(subLgc, lgcFF, trackingList));
+						lgcFF.addDescendentCount(calculateFFDelta_recur(subLgc, lgcFF, lgcFF, trackingList));
 						trackingList.remove(subLgc);
 						//System.err.println("* Exit from: " + subLgc.getName());
 					}
@@ -189,7 +199,7 @@ public class LogicalGraph {
 			}
 		}
 	}
-	private int calculateFFDelta_recur(LogicalGraphComponent currentLgc, LogicalGraphComponent lgcFF, LinkedList<LogicalGraphComponent> trackingList) {
+	private int calculateFFDelta_recur(LogicalGraphComponent currentLgc, LogicalGraphComponent lgcFF, LogicalGraphComponent parentLgc, LinkedList<LogicalGraphComponent> trackingList) {
 		// If FF, return 1
 		if (currentLgc.getCell().getName().matches("(.*)" + FF_NAME_PATTERN + "(.*)") || currentLgc.getCell().getName().equals("TOP")) {
 			//System.err.println("** END");
@@ -214,9 +224,14 @@ public class LogicalGraph {
 				if (!currentLgc.getVisitingFFList().contains(lgcFF)) {
 					currentLgc.getVisitingFFList().add(lgcFF);
 				}
+				lgcFF.getVisitingComponentSet().add(currentLgc);
+				parentLgc.getVisitingComponentSet().add(currentLgc);
+				parentLgc.getVisitingComponentSet().addAll(currentLgc.getVisitingComponentSet());
 				return currentLgc.getDescendentCount() + 1;
 			}
 		} else {
+			lgcFF.getVisitingComponentSet().add(currentLgc);
+			parentLgc.getVisitingComponentSet().add(currentLgc);
 			trackingList.add(currentLgc);
 			currentLgc.setVisit(true);
 			currentLgc.setDescendentCount(0);
@@ -240,13 +255,14 @@ public class LogicalGraph {
 							}
 						}
 						if (!inputCheck) { continue; }
-						currentLgc.addDescendentCount(calculateFFDelta_recur(subLgc, lgcFF, trackingList));
+						currentLgc.addDescendentCount(calculateFFDelta_recur(subLgc, lgcFF, currentLgc, trackingList));
 						trackingList.remove(subLgc);
 						//System.err.println("*recur> Exit from: " + subLgc.getName());
 
 					}
 				}
 			}
+			parentLgc.getVisitingComponentSet().addAll(currentLgc.getVisitingComponentSet());
 			return currentLgc.getDescendentCount() + 1;
 		}
 	}
@@ -281,10 +297,13 @@ public class LogicalGraph {
 			HashSet<String> set = new HashSet<String>();
 			Double delta = 0.0;
 			Double ffDescendent = 0.0;
+			HashSet<LogicalGraphComponent> union = new HashSet<LogicalGraphComponent>();
 			for (LogicalGraphComponent ff : lgc.getVisitingFFList()) {
 				set.add(ff.getName());
+				union.addAll(ff.getVisitingComponentSet());
 				ffDescendent += ff.getDescendentCount();
 			}
+			ffDescendent = 0.0 + union.size();
 			delta = lgc.getDescendentCount() / ffDescendent;
 			if (maximumSet.containsKey(set)) {
 				if (maximumSet.get(set) < delta) {
@@ -293,7 +312,7 @@ public class LogicalGraph {
 			} else {
 				maximumSet.put(set, delta);
 			}
-			System.out.print("- " + lgc.getName() + " [" + lgc.getDescendentCount() +"] - ");
+			System.out.print("- " + lgc.getName() + " [" + delta + "=" + lgc.getDescendentCount() + "/" + ffDescendent + "] - ");
 			for (LogicalGraphComponent fflgc : lgc.getVisitingFFList()) {
 				System.out.print(" " + fflgc.getName());
 			}
@@ -312,5 +331,16 @@ public class LogicalGraph {
 			}
 			System.out.println();
 		}
+		
+		for (LogicalGraphComponent ffLGC : lg.getFFList()) {
+			System.out.print(ffLGC.getName());
+			Iterator<LogicalGraphComponent> test = ffLGC.getVisitingComponentSet().iterator();
+			while (test.hasNext()) {
+				LogicalGraphComponent testLGC = test.next();
+				System.out.print("\t" + testLGC.getName());
+			}
+			System.out.println();
+		}
+		
 	}
 }
