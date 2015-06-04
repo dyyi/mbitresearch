@@ -280,7 +280,7 @@ public class LogicalGraph {
             }
              
         });
-        Collections.reverse(list); // 주석시 오름차순
+        Collections.reverse(list);
         return list;
     }
     
