@@ -24,7 +24,6 @@ public class LogicalGraphComponent {
 	public Integer getDescendentCount() { return descendentCount;}
 	public void setDescendentCount(Integer descendentCount) { this.descendentCount = descendentCount; }
 	public Boolean getVisit() { return visit; }
-	public Boolean isVisit() { return visit; }
 	public void setVisit(Boolean visit) { this.visit = visit; }
 
 	// Constructor
@@ -34,16 +33,11 @@ public class LogicalGraphComponent {
 		connectionHash = new HashMap<Pin, Net>();
 		visitingFFList = new LinkedList<LogicalGraphComponent>();
 		descendentCount = null;
-		visit = null;
+		visit = false;
 	}
 	
 	// Methods
-	@Override
-	public boolean equals(Object obj) {
-		if (obj != null && obj.getClass().equals(this.getClass())) {
-			return ((Cell)obj).getName().equals(this.getName());
-		} else {
-			return false;
-		}
-	}
+	public Boolean isVisit() { return visit; }
+	public void addDescendentCount(Integer descendentCount) { this.descendentCount += descendentCount; }
+
 }

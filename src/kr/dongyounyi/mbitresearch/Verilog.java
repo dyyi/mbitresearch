@@ -139,6 +139,10 @@ public class Verilog {
 					while (pinMatcher.find()) {
 						vc.getConnectionHash().put(pinMatcher.group(1), pinMatcher.group(2));
 					}
+					pinMatcher = Pattern.compile("\\.(\\S+)\\((\\S+)\\)\\s*\\)").matcher(line);
+					if (pinMatcher.find()) {
+						vc.getConnectionHash().put(pinMatcher.group(1), pinMatcher.group(2));
+					}
 					this.componentList.push(vc);
 					continue;
 				}
