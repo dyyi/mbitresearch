@@ -202,6 +202,9 @@ public class LogicAnalyzer {
 					LogicComponent subLgc = subIt.next();
 					boolean inputCheck = false;
 					for (Pin tempPin : net.getConnectionHash().get(subLgc)) {
+						if (tempPin == null || tempPin.getDirection() == null) {
+							continue;
+						}
 						if (tempPin.getDirection().equals("INPUT")) {
 							inputCheck = true;
 						}
